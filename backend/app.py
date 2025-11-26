@@ -353,24 +353,33 @@ def download_file(filename):
         return jsonify({'error': 'File not found'}), 404
 
 # ---------- Auth ----------
+# ===== Replace admin login handler =====
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():
-    data = request.get_json()
+    # accept json or form-encoded
+    data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': 'No data provided'}), 400
-    
+        data = request.form.to_dict()
+
     username = data.get('username')
     password = data.get('password')
 
+    if not username or not password:
+        return jsonify({'error': 'username and password required'}), 400
+
+    # existing admin check (keeps your current ADMIN_USERNAME / ADMIN_PASSWORD_HASH logic)
     if username == ADMIN_USERNAME and check_password_hash(ADMIN_PASSWORD_HASH, password):
+        session.permanent = True
         session['admin_logged_in'] = True
         session['admin_id'] = 1
         session['admin_username'] = username
         logger.info("Admin login successful.")
-        return jsonify({'success': True})
-    
+        resp = make_response(jsonify({'ok': True, 'admin': {'id': session['admin_id'], 'username': session['admin_username']}}))
+        return resp
+
     logger.warning("Invalid admin login attempt.")
     return jsonify({'error': 'Invalid credentials'}), 401
+# =======================================
 
 @app.route('/api/admin/logout', methods=['POST'])
 @login_required
@@ -396,34 +405,41 @@ def get_admin_info():
     })
 
 # ---------- Manager Auth ----------
+# ===== Replace manager login handler =====
 @app.route('/api/manager/login', methods=['POST'])
 def manager_login():
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': 'No data provided'}), 400
-    
+        data = request.form.to_dict()
+
     username = data.get('username')
     password = data.get('password')
-    
+
+    if not username or not password:
+        return jsonify({'error': 'username and password required'}), 400
+
     try:
         with sqlite3.connect(DB_FILE) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM managers WHERE username = ?', (username,))
             manager = cursor.fetchone()
-        
+
         if manager and check_password_hash(manager['password_hash'], password):
+            session.permanent = True
             session['manager_logged_in'] = True
             session['manager_id'] = manager['id']
             session['manager_username'] = manager['username']
             logger.info(f"Manager login successful: {username}")
-            return jsonify({'success': True, 'manager_id': manager['id']})
-        
+            resp = make_response(jsonify({'ok': True, 'manager': {'id': session['manager_id'], 'username': session['manager_username']}}))
+            return resp
+
         logger.warning(f"Invalid manager login attempt: {username}")
         return jsonify({'error': 'Invalid credentials'}), 401
     except Exception as e:
         logger.error(f"Manager login error: {e}")
         return jsonify({'error': str(e)}), 500
+# =======================================
 
 @app.route('/api/manager/logout', methods=['POST'])
 @manager_login_required
@@ -463,38 +479,42 @@ def get_manager_info():
         return jsonify({'error': str(e)}), 500
 
 # ---------- Employee Auth ----------
+# ===== Replace employee login handler =====
 @app.route('/api/employee/login', methods=['POST'])
 def employee_login():
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': 'No data provided'}), 400
-    
-    employee_id_field = data.get('employee_id')
+        data = request.form.to_dict()
+
+    employee_id_field = data.get('employee_id') or data.get('employee_id_field')  # accept either key
     username = data.get('username')
     password = data.get('password')
-    
+
     if not employee_id_field or not username or not password:
         return jsonify({'error': 'Employee ID, username, and password are required'}), 400
-    
+
     try:
         with sqlite3.connect(DB_FILE) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM employees WHERE employee_id_field = ? AND username = ?', (employee_id_field, username))
             employee = cursor.fetchone()
-        
+
         if employee and check_password_hash(employee['password_hash'], password):
+            session.permanent = True
             session['employee_logged_in'] = True
             session['employee_id'] = employee['id']
             session['employee_username'] = employee['username']
             logger.info(f"Employee login successful: {employee_id_field} / {username}")
-            return jsonify({'success': True, 'employee_id': employee['id']})
-        
+            resp = make_response(jsonify({'ok': True, 'employee': {'id': session['employee_id'], 'username': session['employee_username']}}))
+            return resp
+
         logger.warning(f"Invalid employee login attempt: {employee_id_field} / {username}")
         return jsonify({'error': 'Invalid credentials'}), 401
     except Exception as e:
         logger.error(f"Employee login error: {e}")
         return jsonify({'error': str(e)}), 500
+# =======================================
 
 @app.route('/api/employee/logout', methods=['POST'])
 def employee_logout():
