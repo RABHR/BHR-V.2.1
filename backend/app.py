@@ -30,24 +30,24 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'a-very-secret-key-that-should-be-in-env')
 
-# --- CORS Configuration ---
-#CORS(app, resources={r"/api/*": {
-#    "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
-#    "supports_credentials": True
-#}})
-# --- CORS Configuration ---
+# --- CORS + Session configuration (dynamic based on FRONTEND_URL) ---
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
-CORS(app, resources={r"/api/*": {
-    "origins": [FRONTEND_URL, "http://127.0.0.1:3000"],
-    "supports_credentials": True
-}})
+# Ensure FRONTEND_URL includes protocol (http:// or https://)
+if not (FRONTEND_URL.startswith("http://") or FRONTEND_URL.startswith("https://")):
+    FRONTEND_URL = "http://" + FRONTEND_URL
 
+is_frontend_https = FRONTEND_URL.startswith("https://")
 
-# --- Session Configuration ---
+# CORS: allow only the configured frontend origin and support credentials
+CORS(app, resources={r"/api/*": {"origins": [FRONTEND_URL], "supports_credentials": True}})
+
+# Session cookie config:
+# - In production (frontend served over HTTPS) use Secure + SameSite=None to allow cross-site cookies
+# - In development (http localhost) use Secure=False and SameSite=Lax
 app.config.update(
-    SESSION_COOKIE_SAMESITE='Lax',
-    SESSION_COOKIE_SECURE=False,
     SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=is_frontend_https,
+    SESSION_COOKIE_SAMESITE=('None' if is_frontend_https else 'Lax'),
     PERMANENT_SESSION_LIFETIME=timedelta(days=1)
 )
 
