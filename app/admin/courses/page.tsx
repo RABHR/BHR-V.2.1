@@ -1017,7 +1017,7 @@ export default function CoursesAdminPage() {
                     <tr className="border-b hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm">
                         {course.thumbnail_url ? (
-                          <img src={course.thumbnail_url.startsWith('http') ? course.thumbnail_url : `http://localhost:5000${course.thumbnail_url}`} alt={course.title} className="h-12 w-16 object-cover rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          <img src={course.thumbnail_url.startsWith('http') ? course.thumbnail_url : `${process.env.NEXT_PUBLIC_API_URL}${course.thumbnail_url}`} alt={course.title} className="h-12 w-16 object-cover rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                         ) : (
                           <div className="h-12 w-16 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">No image</div>
                         )}
