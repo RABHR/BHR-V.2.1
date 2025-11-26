@@ -31,10 +31,17 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'a-very-secret-key-that-should-be-in-env')
 
 # --- CORS Configuration ---
+#CORS(app, resources={r"/api/*": {
+#    "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+#    "supports_credentials": True
+#}})
+# --- CORS Configuration ---
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 CORS(app, resources={r"/api/*": {
-    "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+    "origins": [FRONTEND_URL, "http://127.0.0.1:3000"],
     "supports_credentials": True
 }})
+
 
 # --- Session Configuration ---
 app.config.update(
