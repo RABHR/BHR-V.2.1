@@ -1942,5 +1942,6 @@ def internal_error(error):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get("FLASK_DEBUG", "False").lower() in ("1","true","yes")
     logger.info(f"Starting Flask server on http://0.0.0.0:{port}")
     app.run(host='0.0.0.0', port=port)
